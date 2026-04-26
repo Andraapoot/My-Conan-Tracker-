@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Detective Conan Tracker</title>
+    
+    <!-- PWA - OFFLINE READY -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkRldGVjdGl2ZSBDb25hbiBUcmFja2VyIiwKICAic2hvcnRfbmFtZSI6ICJDb25hbiBUcmFjayIsCiAgImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2ZytodG1sO2Jhc2U2NCxQSE4yWXc9PSIsInNpemVzIjoiMTkyeDE5MiJ9XSwKICAic3RhcnRfdXJsIjoiLiIsCiAgImRpc3BsYXkiOiJzdGFuZGFsb25lIiwKICAidGhlbWVfY29sb3IiOiIjZmY2YjM1IiwKICAiYmFja2dyb3VuZF9jb2xvciI6IiMwYTBhMWEifQ==">
+    <meta name="theme-color" content="#ff6b35">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0a1a;
+            --bg-secondary: #1a1a2e;
+            --glass-bg: rgba(255,255,255,0.08);
+            --glass-border: rgba(255,255,255,0.15);
+            --text-primary: white;
+            --accent: #ff6b35;
+            --success: #4ade80;
+            --skip: #f59e0b;
+            --filler: #ef4444;
+        }
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #f1f5f9;
+            --glass-bg: rgba(0,0,0,0.05);
+            --glass-border: rgba(0,0,0,0.1);
+            --text-primary: #1e293b;
+            --accent: #f97316;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        
+        /* THEME TOGGLE */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+        .theme-toggle:hover { transform: scale(1.1); }
+        
+        .header {
+            background: linear-gradient(90deg, var(--accent), #f97316, var(--accent));
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(255,107,53,0.3);
+            margin-top: 60px;
+        }
+        .progress-container {
+            margin-top: 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 25px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+        }
+        .progress-bar {
+            width: 100%; height: 12px; background: rgba(255,255,255,0.2);
+            border-radius: 6px; overflow: hidden; margin-top: 0.5rem;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, var(--success), #22c55e);
+            border-radius: 6px; width: 0%; transition: width 0.5s ease;
+        }
+        
+        /* STATS DASHBOARD */
+        .stats-dashboard {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid var(--glass-border);
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-number { 
+            font-size: 2.5rem; 
+            font-weight: bold;
+            background: linear-gradient(45deg, var(--accent), #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .stat-favorite { background: linear-gradient(45deg, #8b5cf6, #7c3aed); }
+        .stat-skip { background: linear-gradient(45deg, var(--skip), #f59e0b); }
+        
+        /* REST OF STYLES */
+        .container { max-width: 1400px; margin: 0 auto 2rem; padding: 0 1rem; }
+        .main-tabs { display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; }
+        .tab-btn {
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: linear-gradient(45deg, var(--accent), #f97316);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(255,107,53,0.4);
+        }
+        
+        .season-nav {
+            display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;
+            margin-bottom: 2rem; padding: 1.5rem;
+            background: var(--glass-bg); border-radius: 20px; backdrop-filter: blur(10px);
+        }
+        .season-btn, .btn {
+            background: var(--glass-bg); border: 2px solid var(--glass-border);
+            color: var(--text-primary); padding: 1rem 1.5rem; border-radius: 25px;
+            cursor: pointer; font-weight: bold; transition: all 0.3s;
+        }
+        .season-btn.active, .season-btn:hover, .btn:hover {
+            background: linear-gradient(45deg, var(--accent), #f97316);
+            transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,107,53,0.4);
+        }
+        
+        .season-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;
+        }
+        .episode {
+            background: var(--glass-bg); border-radius: 20px; padding: 1.8rem;
+            backdrop-filter: blur(15px); border: 1px solid var(--glass-border);
+            transition: all 0.4s;
+            position: relative;
+        }
+        .episode:hover { transform: translateY(-10px); box-shadow: 0 25px 50px rgba(0,0,0,0.4); }
+        .episode.watched { background: linear-gradient(135deg, rgba(255,107,53,0.2), rgba(247,147,30,0.15)); }
+        .episode.favorite { border-color: #8b5cf6; box-shadow: 0 0 20px rgba(139,92,246,0.3); }
+        .episode.skipped { 
+            background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(251,191,36,0.15));
+            border-color: var(--skip);
+        }
+        .episode.filler { 
+            background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(220,38,38,0.15));
+            border-color: var(--filler); animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        
+        .ep-number { font-size: 2.2rem; font-weight: bold; color: var(--accent); margin-bottom: 0.5rem; }
+        .status-badge {
+            position: absolute; top: 1rem; right: 1rem; padding: 0.3rem 0.8rem;
+            border-radius: 20px; font-size: 0.8rem; font-weight: bold;
+        }
+        .status-skipped { background: rgba(245,158,11,0.3); color: #d97706; }
+        .status-filler { background: rgba(239,68,68,0.4); color: white; }
+        
+        .action-buttons { display: flex; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .action-btn { flex: 1; padding: 0.8rem; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: all 0.3s; font-size: 0.9rem; }
+        .mark-watched { background: linear-gradient(45deg, #4ade80, #22c55e); color: white; }
+        .unmark-watched, .favorite-btn, .skip-btn { background: var(--glass-bg); color: var(--accent); border: 2px solid var(--accent); }
+        .skip-btn { border-color: var(--skip); color: var(--skip); }
+        .skip-btn.active { background: linear-gradient(45deg, var(--skip), #f59e0b); color: white; }
+        .favorite-btn.active { background: linear-gradient(45deg, #8b5cf6, #7c3aed); border-color: #8b5cf6; color: white; }
+        
+        /* 🆕 INTERACTIVE STAR RATING (Letterboxd Style) */
+        .log-section { position: relative; margin-top: 1rem; }
+        .log-box {
+            background: rgba(255,255,255,0.06); backdrop-filter: blur(20px);
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            padding: 1.5rem; transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            opacity: 0; max-height: 0; overflow: hidden;
+        }
+        .log-box.show { opacity: 1; max-height: 500px; margin-top: 1rem; }
+        .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .stars-container { 
+            display: flex; gap: 0.2rem; cursor: pointer; position: relative;
+            padding: 0.5rem; border-radius: 8px; transition: all 0.2s;
+        }
+        .stars-container:hover { background: rgba(255,255,255,0.1); }
+        .star { 
+            font-size: 1.6rem; cursor: pointer; transition: all 0.2s;
+            color: #666; position: relative; width: 1.6rem; height: 1.6rem;
+        }
+        .star:hover, .star.active { color: #ffd700; transform: scale(1.1); }
+        .star::after {
+            content: '⭐'; position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .star.half::before {
+            content: '⭐'; color: #ffd700; clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+        }
+        
+        .view-all-btn {
+            background: rgba(255,107,53,0.3); border: 1px solid rgba(255,107,53,0.5);
+            color: white; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem;
+            cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px);
+        }
+        .view-all-btn:hover { background: rgba(255,107,53,0.5); transform: scale(1.05); }
+        .log-textarea {
+            width: 100%; min-height: 80px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px; padding: 0.8rem; color: var(--text-primary); font-family: inherit;
+            resize: vertical; margin-bottom: 0.8rem;
+        }
+        .log-save-btn {
+            background: linear-gradient(45deg, #4ade80, #22c55e); color: white; border: none;
+            padding: 0.6rem 1.5rem; border-radius: 20px; cursor: pointer; font-weight: bold;
+        }
+        .saved-log {
+            background: rgba(74,222,128,0.2); padding: 0.8rem; border-radius: 12px;
+            margin-top: 0.8rem; border-left: 4px solid #4ade80; font-size: 0.9rem;
+        }
+        
+        /* MODAL & VOICE */
+        .full-logs-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 1000;
+            align-items: center; justify-content: center; padding: 2rem;
+        }
+        .full-logs-box {
+            background: var(--glass-bg); backdrop-filter: blur(25px); border-radius: 25px;
+            border: 1px solid var(--glass-border); max-width: 600px; max-height: 80vh;
+            width: 100%; padding: 2rem; overflow-y: auto;
+        }
+        .modal-close {
+            position: absolute; top: 1.5rem; right: 2rem; background: none; border: none;
+            color: white; font-size: 2rem; cursor: pointer; width: 40px; height: 40px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s;
+        }
+        .voice-btn {
+            position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
+            border-radius: 50%; background: linear-gradient(45deg, var(--accent), #f97316);
+            border: none; color: white; font-size: 1.5rem; cursor: pointer; z-index: 100;
+            box-shadow: 0 10px 30px rgba(255,107,53,0.4); transition: all 0.3s;
+        }
+        .voice-btn.listening { background: linear-gradient(45deg, #ef4444, #dc2626); transform: scale(1.1); }
+        
+        /* MOVIES */
+        .movies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem; }
+        .movie-card {
+            background: var(--glass-bg); border-radius: 20px; padding: 1.5rem;
+            backdrop-filter: blur(15px); border: 1px solid var(--glass-border);
+            text-align: center; transition: all 0.3s;
+        }
+        .movie-card:hover { transform: translateY(-10px); }
+        .movie-poster { 
+            width: 100%; height: 200px; object-fit: cover; 
+            border-radius: 15px; margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-dashboard { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+            .action-buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <!-- THEME TOGGLE -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌙</button>
+    
+    <!-- VOICE BUTTON -->
+    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice Commands">🎙️</button>
+
+    <div class="header">
+        <h1>🔍 Detective Conan Tracker</h1>
+        <div class="progress-container">
+            <div id="progressText">0% Complete</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATS DASHBOARD -->
+    <div class="stats-dashboard" id="statsDashboard">
+        <div class="stat-card">
+            <div class="stat-number" id="watchedCount">0</div>
+            Watched
+        </div>
+        <div class="stat-card">
+            <div class="stat-number stat-favorite" id="favoriteCount">0</div>
+            Favorites
+        </div>
+        <div class="stat-card">
+            <div class="stat-number stat-skip" id="skipCount">0</div>
+            Skipped
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="avgRating">0.0</div>
+            Avg Rating
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-tabs">
+            <button class="tab-btn active" onclick="switchTab('series')">📺 Series</button>
+            <button class="tab-btn" onclick="switchTab('movies')">🎬 Movies</button>
+        </div>
+
+        <!-- SERIES SECTION -->
+        <div id="seriesSection">
+            <div class="season-nav" id="seasonNav"></div>
+            <div class="season-actions" id="seasonActions" style="display: none; justify-content: center; gap: 1rem;">
+                <button class="btn" onclick="markSeasonAll()">✅ Mark Season Complete</button>
+                <button class="btn" style="background: linear-gradient(45deg, #ef4444, #dc2626);" onclick="clearSeason()">❌ Clear Season</button>
+            </div>
+            <div class="season-info" id="seasonInfo" style="text-align: center; font-size: 1.2rem; margin: 1rem 0;"></div>
+            <div class="season-grid" id="seasonEpisodes"></div>
+        </div>
+
+        <!-- MOVIES SECTION -->
+        <div id="moviesSection" style="display: none;">
+            <div class="movies-grid" id="moviesGrid"></div>
+        </div>
+    </div>
+
+    <!-- FULL LOGS MODAL -->
+    <div class="full-logs-modal" id="fullLogsModal">
+        <button class="modal-close" onclick="closeFullLogs()">×</button>
+        <div class="full-logs-box">
+            <h3>📝 All Logs</h3>
+            <div class="logs-list" id="logsList"></div>
+        </div>
+    </div>
+
+    <script>
+         const SEASONS = [
+            {id: 1, start: 1, end: 30, name: "Season 1"},
+            {id: 2, start: 31, end: 60, name: "Season 2"},
+            {id: 3, start: 61, end: 90, name: "Season 3"},
+            {id: 4, start: 91, end: 120, name: "Season 4"},
+            {id: 5, start: 121, end: 150, name: "Season 5"},
+            {id: 6, start: 151, end: 180, name: "Season 6"},
+            {id: 7, start: 181, end: 210, name: "Season 7"},
+            {id: 8, start: 211, end: 240, name: "Season 8"},
+            {id: 9, start: 241, end: 270, name: "Season 9"},
+            {id: 10, start: 271, end: 300, name: "Season 10"},
+            {id: 11, start: 301, end: 330, name: "Season 11"},
+            {id: 12, start: 331, end: 360, name: "Season 12"},
+            {id: 13, start: 361, end: 390, name: "Season 13"},
+            {id: 14, start: 391, end: 420, name: "Season 14"},
+            {id: 15, start: 421, end: 450, name: "Season 15"},
+            {id: 16, start: 451, end: 480, name: "Season 16"},
+            {id: 17, start: 481, end: 510, name: "Season 17 (You're Here!)"},
+                        {id: 18, start: 511, end: 540, name: "Season 18"},
+            {id: 19, start: 541, end: 570, name: "Season 19"},
+            {id: 20, start: 571, end: 600, name: "Season 20"},
+            {id: 21, start: 601, end: 630, name: "Season 21"},
+            {id: 22, start: 631, end: 660, name: "Season 22"},
+            {id: 23, start: 661, end: 690, name: "Season 23"},
+            {id: 24, start: 691, end: 720, name: "Season 24"},
+            {id: 25, start: 721, end: 750, name: "Season 25"},
+            {id: 26, start: 751, end: 780, name: "Season 26"},
+            {id: 27, start: 781, end: 810, name: "Season 27"},
+            {id: 28, start: 811, end: 840, name: "Season 28"},
+            {id: 29, start: 841, end: 870, name: "Season 29"},
+            {id: 30, start: 871, end: 900, name: "Season 30"},
+            {id: 31, start: 901, end: 930, name: "Season 31"},
+            {id: 32, start: 931, end: 960, name: "Season 32"},
+            {id: 33, start: 961, end: 990, name: "Season 33"},
+            {id: 34, start: 991, end: 1020, name: "Season 34"},
+            {id: 35, start: 1021, end: 1050, name: "Season 35"},
+            {id: 36, start: 1051, end: 1080, name: "Season 36"},
+            {id: 37, start: 1081, end: 1110, name: "Season 37"},
+            {id: 38, start: 1111, end: 1130, name: "Season 38 (Final)"}
+        ];
+
+        const MOVIES = [
+            {id: 1, title: "The Time Bombed Skyscraper", poster: "https://imgs.search.brave.com/IoerkoFBNiZKBGRRalZmuzALq1rrxp__cAqwMUfp0M4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tLm1l/ZGlhLWFtYXpvbi5j/b20vaW1hZ2VzL0kv/NTFSRjhXRDEyQ0wu/anBn", note: "Watch after Ep 54"},
+            {id: 2, title: "The Fourteenth Target", poster: "https://myanimelist.net/images/anime/1900/94316.webp", note: "Watch after Ep 118"},
+            {id: 3, title: "The Last Wizard of the Century", poster: "https://myanimelist.net/images/anime/1831/94317.webp", note: "Watch after Ep 188"},
+            {id: 4, title: "Captured in Her Eyes", poster: "https://myanimelist.net/images/anime/1196/94319.webp", note: "Watch after Ep 270"},
+            {id: 5, title: "Countdown to Heaven", poster: "https://myanimelist.net/images/anime/1144/92654.webp", note: "Watch after Ep 345"},
+            {id: 6, title: "The Phantom of Baker Street", poster: "https://myanimelist.net/images/anime/1400/94320.webp", note: "⚠️ Watch AFTER series completion"},
+            {id: 7, title: "Crossroad in the Ancient Capital", poster: "https://myanimelist.net/images/anime/10/20984.webp", note: "Watch after Ep 425"},
+            {id: 8, title: "Magician of the Silver Sky", poster: "https://myanimelist.net/images/anime/2/20982.webp", note: "Watch after Ep 510"},
+            {id: 9, title: "Strategy Above the Depths", poster: "https://myanimelist.net/images/anime/8/20983.webp", note: "Watch after Ep 595"},
+            {id: 10, title: "The Private Eyes' Requiem", poster: "https://myanimelist.net/images/anime/1919/94322.webp", note: "Watch after Ep 680"},
+            {id: 11, title: "Jolly Roger in the Deep Azure", poster: "https://myanimelist.net/images/anime/1765/94323.webp", note: "Watch after Ep 765"},
+            {id: 12, title: "Full Score of Fear", poster: "", note: "Watch after Ep 850"},
+            {id: 13, title: "The Raven Chaser", poster: "https://myanimelist.net/images/anime/2/22558.webp", note: "Watch after Ep 935"},
+            {id: 14, title: "Heaven's Door and the Crimson Wolf", poster: "https://myanimelist.net/images/anime/7/22312.webp", note: "Watch after Ep 1020"},
+            {id: 15, title: "Quarter of Silence", poster: "https://myanimelist.net/images/anime/9/32035.webp", note: "Watch after Ep 1105"},
+            {id: 16, title: "The Eleventh Striker", poster: "https://myanimelist.net/images/anime/8/37511.webp", note: "Watch anytime"},
+            {id: 17, title: "Private Eye in the Distant Sea", poster: "https://myanimelist.net/images/anime/4/47419.webp", note: "Watch anytime"},
+            {id: 18, title: "Dimensional Sniper", poster: "https://myanimelist.net/images/anime/11/60289.webp", note: "Watch anytime"},
+            {id: 19, title: "Sunflowers of Inferno", poster: "https://myanimelist.net/images/anime/5/73618.webp", note: "Watch anytime"},
+            {id: 20, title: "The Darkest Nightmare", poster: "https://myanimelist.net/images/anime/10/78894.webp", note: "Watch anytime"},
+            {id: 21, title: "The Crimson Love Letter", poster: "https://myanimelist.net/images/anime/2/83919.webp", note: "Watch anytime"},
+            {id: 22, title: "Zero the Enforcer", poster: "https://myanimelist.net/images/anime/12/90104.webp", note: "Watch anytime"},
+            {id: 23, title: "The Fist of Blue Sapphire", poster: "https://myanimelist.net/images/anime/1010/98309.webp", note: "Watch anytime"},
+            {id: 24, title: "The Scarlet Bullet", poster: "https://myanimelist.net/images/anime/1306/112616.webp", note: "Watch anytime"},
+            {id: 25, title: "100 Million Dollars' Half a Penny", poster: "https://myanimelist.net/images/anime/1744/120789.webp", note: "Watch anytime"},
+            {id: 26, title: "Black Iron Submarine", poster: "https://myanimelist.net/images/anime/1138/133101.webp", note: "Watch anytime"},
+            {id: 27, title: "1000-Piece Puzzle", poster: "https://myanimelist.net/images/anime/1888/141209.webp", note: "Watch anytime"},
+            {id: 28, title: "One-Eyed Flashback", poster: "https://myanimelist.net/images/anime/1036/148145.webp", note: "Watch anytime"},
+            {id: 29, title: "Fallen Angel of the Highway", poster: "https://myanimelist.net/images/anime/1788/155583.jpg", note: "Watch anytime"}
+        ];
+
+        // STATE
+        let watchedEpisodes = JSON.parse(localStorage.getItem('conanEpisodes')) || {};
+        let favoriteEpisodes = JSON.parse(localStorage.getItem('conanFavorites')) || {};
+        let skippedEpisodes = JSON.parse(localStorage.getItem('conanSkipped')) || {};
+        let watchedMovies = JSON.parse(localStorage.getItem('conanMovies')) || {};
+        let logs = JSON.parse(localStorage.getItem('conanLogs')) || {};
+        let currentSeason = 17;
+        let currentTab = 'series';
+        let tempRatings = {};
+        let recognition;
+        let isListening = false;
+        let filterMode = null; // 'favorites', 'skipped', 'watched'
+
+        // 🆕 THEME
+        function toggleTheme() {
+            const theme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            document.querySelector('.theme-toggle').textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+
+        // 🆕 FIXED VOICE + QUICK JUMP
+        function toggleVoice() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Voice not supported');
+                return;
+            }
+
+            const btn = document.getElementById('voiceBtn');
+            if (!recognition) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = function(event) {
+                    const command = event.results[0][0].transcript.toLowerCase().trim();
+                    executeVoiceCommand(command);
+                };
+
+                recognition.onend = function() {
+                    isListening = false;
+                    btn.classList.remove('listening');
+                    btn.textContent = '🎙️';
+                };
+            }
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                isListening = true;
+                btn.classList.add('listening');
+                btn.textContent = '🔴';
+            }
+        }
+
+        function executeVoiceCommand(command) {
+            console.log('Executing:', command);
+            
+            // 🆕 QUICK JUMP
+            const epMatch = command.match(/episode\s+(\d+|(\d+)\s+to\s+(\d+))/i);
+            if (epMatch) {
+                if (epMatch[3]) {
+                    // Range: "go to episode 480 to 490"
+                    const start = parseInt(epMatch[2]);
+                    const end = parseInt(epMatch[3]);
+                    const season = findSeasonForEp(start);
+                    if (season) {
+                        currentSeason = season.id;
+                        renderSeasonNav();
+                        renderEpisodes();
+                        alert(`Jumped to S${season.id} (${start}-${end})`);
+                        return;
+                    }
+                } else {
+                    // Single: "go to episode 492"
+                    const epNum = parseInt(epMatch[1]);
+                    const season = findSeasonForEp(epNum);
+                    if (season) {
+                        currentSeason = season.id;
+                        renderSeasonNav();
+                        renderEpisodes();
+                        scrollToEpisode(epNum);
+                        alert(`Jumped to Ep ${epNum} (S${season.id})`);
+                        return;
+                    }
+                }
+            }
+            
+            // Other commands
+            const epNum = parseInt(command.match(/(\d+)/)?.[1] || '0');
+            if (!epNum) {
+                alert(`Say episode number! "go to 492", "mark 492 watched", "skip 503"`);
+                return;
+            }
+
+            if (command.includes('watched') || command.includes('watch')) {
+                toggleEpisode(epNum);
+            } else if (command.includes('favorite') || command.includes('favourite') || command.includes('love')) {
+                toggleFavorite(epNum);
+            } else if (command.includes('skip') || command.includes('skipped')) {
+                toggleSkip(epNum);
+            } else if (command.includes('log') || command.includes('thoughts')) {
+                toggleLog(epNum);
+            } else {
+                alert(`"${command}" → Try: "go to 492", "mark 492 watched", "skip 503"`);
+            }
+        }
+
+        function findSeasonForEp(epNum) {
+            return SEASONS.find(s => epNum >= s.start && epNum <= s.end);
+        }
+
+        function scrollToEpisode(epNum) {
+            const ep = document.querySelector(`[data-episode="${epNum}"]`);
+            if (ep) ep.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // 🆕 DASHBOARD BUTTONS (Filter Mode)
+        function filterFavorites() {
+            filterMode = 'favorites';
+            showFilteredEpisodes();
+        }
+
+        function filterSkipped() {
+            filterMode = 'skipped';
+            showFilteredEpisodes();
+        }
+
+        function showFilteredEpisodes() {
+            switchTab('series'); // Ensure series tab
+            
+            const season = SEASONS.find(s => s.id === currentSeason);
+            const container = document.getElementById('seasonEpisodes');
+            
+            let filteredEps = [];
+            for (let i = season.start; i <= season.end; i++) {
+                const epId = `ep${i}`;
+                if (filterMode === 'favorites' && favoriteEpisodes[epId]) filteredEps.push(i);
+                else if (filterMode === 'skipped' && skippedEpisodes[epId]) filteredEps.push(i);
+            }
+            
+            let html = `<div style="text-align:center;padding:2rem;font-size:1.2rem;">
+                ${filterMode === 'favorites' ? '💖 ' : '⏭️ '}${filterMode.toUpperCase()} (${filteredEps.length} episodes)
+                <br><button class="btn" onclick="clearFilter()" style="margin-top:1rem;">← Back to Normal</button>
+            </div>`;
+            
+            if (filteredEps.length > 0) {
+                html += filteredEps.map(num => {
+                    const epId = `ep${num}`;
+                    const isWatched = watchedEpisodes[epId];
+                    const isFavorite = favoriteEpisodes[epId];
+                    const isSkipped = skippedEpisodes[epId];
+                    return `
+                    <div class="episode ${isWatched?'watched':''} ${isFavorite?'favorite':''} ${isSkipped?'skipped':''}" data-episode="${num}">
+                        <div class="ep-number">Ep ${num.toString().padStart(3, '0')}</div>
+                        <div class="action-buttons">
+                            <button class="action-btn ${isWatched ? 'unmark-watched' : 'mark-watched'}" onclick="toggleEpisode(${num})">
+                                ${isWatched ? '❌ Unwatch' : '✅ Mark Watched'}
+                            </button>
+                            <button class="action-btn skip-btn ${isSkipped ? 'active' : ''}" onclick="toggleSkip(${num})">
+                                ${isSkipped ? '✅ Unskip' : '⏭️ Skip'}
+                            </button>
+                            <button class="action-btn favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite(${num})">
+                                ${isFavorite ? '💖' : '🤍'} Favorite
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            
+            container.innerHTML = html;
+            document.getElementById('seasonInfo').innerHTML = `<strong>${filterMode.toUpperCase()} Filter Active</strong>`;
+        }
+
+        function clearFilter() {
+            filterMode = null;
+            renderEpisodes();
+        }
+
+        // 🆕 SKIP TRACKER
+        function toggleSkip(num) {
+            const id = `ep${num}`;
+            skippedEpisodes[id] = !skippedEpisodes[id];
+            if (skippedEpisodes[id]) {
+                watchedEpisodes[id] = false;
+            }
+            localStorage.setItem('conanSkipped', JSON.stringify(skippedEpisodes));
+            localStorage.setItem('conanEpisodes', JSON.stringify(watchedEpisodes));
+            if (filterMode) showFilteredEpisodes();
+            else renderEpisodes();
+            updateStats();
+        }
+
+        // 🆕 INTERACTIVE STAR RATING
+        function setRating(num, rating) {
+            tempRatings[num] = rating;
+            const stars = document.querySelectorAll(`#stars-${num} .star`);
+            stars.forEach((star, index) => {
+                if (index < Math.floor(rating)) {
+                    star.classList.add('active');
+                    star.classList.remove('half');
+                } else if (index === Math.floor(rating) && rating % 1 !== 0) {
+                    star.classList.remove('active');
+                    star.classList.add('half');
+                } else {
+                    star.classList.remove('active', 'half');
+                }
+            });
+        }
+
+        function saveLog(num) {
+            const epId = `ep${num}`;
+            const comment = document.getElementById(`logtext-${num}`).value.trim();
+            const rating = tempRatings[num] || 0;
+            
+            if (comment || rating > 0) {
+                if (!logs[epId]) logs[epId] = [];
+                logs[epId].unshift({ 
+                    rating: Math.round(rating * 2) / 2,
+                    comment, 
+                    date: new Date().toLocaleDateString(), 
+                    episode: num 
+                });
+                localStorage.setItem('conanLogs', JSON.stringify(logs));
+                document.getElementById(`logtext-${num}`).value = '';
+                tempRatings[num] = 0;
+                renderEpisodes();
+            }
+        }
+
+        function toggleLog(num) {
+            const logBox = document.getElementById(`log-${num}`);
+            logBox.classList.toggle('show');
+            if (logBox.classList.contains('show')) {
+                setTimeout(() => document.getElementById(`logtext-${num}`).focus(), 300);
+            }
+        }
+
+        function showAllLogs() {
+            const modal = document.getElementById('fullLogsModal');
+            const logsList = document.getElementById('logsList');
+            const allLogs = Object.values(logs).flat().sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            logsList.innerHTML = allLogs.map(log => {
+                const stars = '★'.repeat(Math.floor(log.rating)) + 
+                             (log.rating % 1 === 0.5 ? '½' : '') + 
+                             '☆'.repeat(5 - Math.ceil(log.rating));
+                return `
+                    <div class="saved-log">
+                        <strong>Ep ${log.episode.toString().padStart(3, '0')}</strong> 
+                        ⭐ ${stars} 
+                        <span style="float:right;opacity:0.7;">${log.date}</span><br>
+                        ${log.comment}
+                    </div>
+                `;
+            }).join('');
+            modal.style.display = 'flex';
+        }
+
+        function closeFullLogs() { 
+            document.getElementById('fullLogsModal').style.display = 'none'; 
+        }
+
+        // 🆕 STATS WITH CLICKABLE BUTTONS
+        function updateStats() {
+            const watched = Object.values(watchedEpisodes).filter(Boolean).length;
+            const favorites = Object.values(favoriteEpisodes).filter(Boolean).length;
+            const skips = Object.values(skippedEpisodes).filter(Boolean).length;
+            const ratings = Object.values(logs).flat().map(l => l.rating);
+            const avgRating = ratings.length ? (ratings.reduce((a,b) => a+b)/ratings.length).toFixed(1) : 0.0;
+            
+            document.getElementById('watchedCount').innerHTML = `<span onclick="showAllWatched()">${watched}</span>`;
+            document.getElementById('favoriteCount').innerHTML = `<span onclick="filterFavorites()" style="cursor:pointer;">${favorites}</span>`;
+            document.getElementById('skipCount').innerHTML = `<span onclick="filterSkipped()" style="cursor:pointer;">${skips}</span>`;
+            document.getElementById('avgRating').textContent = avgRating;
+        }
+
+        function showAllWatched() {
+            // Simple alert for now - shows count across all seasons
+            const totalWatched = Object.values(watchedEpisodes).filter(Boolean).length;
+            alert(`✅ ${totalWatched} episodes watched total!\n(Say "go to [number]" to jump)`);
+        }
+
+        function updateProgress() {
+            const totalEpWatched = Object.values(watchedEpisodes).filter(Boolean).length;
+            const totalEpisodes = SEASONS.reduce((sum, s) => sum + (s.end - s.start + 1), 0);
+            const overall = Math.round((totalEpWatched / totalEpisodes) * 100);
+            document.getElementById('progressFill').style.width = overall + '%';
+            document.getElementById('progressText').textContent = `${overall}% Complete (${totalEpWatched}/${totalEpisodes} eps)`;
+        }
+
+        // RENDER FUNCTIONS (UNCHANGED - LOGS FULLY RESTORED)
+        function renderEpisodes() {
+            const season = SEASONS.find(s => s.id === currentSeason);
+            const container = document.getElementById('seasonEpisodes');
+            const info = document.getElementById('seasonInfo');
+
+            if (!season || filterMode) return;
+
+            info.innerHTML = `<strong>${season.name}</strong> - Episodes ${season.start} to ${season.end}`;
+
+            let html = '';
+            for (let i = season.start; i <= season.end; i++) {
+                const epId = `ep${i}`;
+                const isWatched = watchedEpisodes[epId];
+                const isFavorite = favoriteEpisodes[epId];
+                const isSkipped = skippedEpisodes[epId];
+                const epLogs = logs[epId] || [];
+                const rating = tempRatings[i] || (epLogs[0]?.rating || 0);
+                
+                const ratingDisplay = rating > 0 ? 
+                    `⭐ ${'★'.repeat(Math.floor(rating))}${rating % 1 === 0.5 ? '½' : ''}${'☆'.repeat(5 - Math.ceil(rating))}` : '';
+
+                html += `
+                <div class="episode ${isWatched ? 'watched' : ''} ${isFavorite ? 'favorite' : ''} ${isSkipped ? 'skipped' : ''}" data-episode="${i}">
+                    <div class="ep-number">Ep ${i.toString().padStart(3, '0')}</div>
+                    <div class="ep-title">Detective Conan Episode ${i}</div>
+                    
+                    ${isSkipped ? '<div class="status-badge status-skipped">⏭️ Skipped</div>' : ''}
+                    
+                    <div class="action-buttons">
+                        <button class="action-btn ${isWatched ? 'unmark-watched' : 'mark-watched'}" onclick="toggleEpisode(${i})">
+                            ${isWatched ? '❌ Unwatch' : '✅ Mark Watched'}
+                        </button>
+                        <button class="action-btn log-btn" onclick="toggleLog(${i})">📝 Log</button>
+                        <button class="action-btn skip-btn ${isSkipped ? 'active' : ''}" onclick="toggleSkip(${i})">
+                            ${isSkipped ? '✅ Unskip' : '⏭️ Skip'}
+                        </button>
+                        <button class="action-btn favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite(${i})">
+                            ${isFavorite ? '💖' : '🤍'} Favorite
+                        </button>
+                    </div>
+
+                    ${ratingDisplay ? `<div style="text-align:center;margin:0.5rem 0;color:#ffd700;font-size:0.9rem;">${ratingDisplay}</div>` : ''}
+
+                    <div class="log-section">
+                        <div class="log-box" id="log-${i}">
+                            <div class="log-header">
+                                <div class="stars-container" id="stars-${i}" data-episode="${i}">
+                                    ${[1,2,3,4,5].map(r => `<span class="star" data-rating="${r}"></span>`).join('')}
+                                </div>
+                                <button class="view-all-btn" onclick="showAllLogs()">View All Logs</button>
+                            </div>
+                            <textarea class="log-textarea" id="logtext-${i}" placeholder="Your thoughts... ⭐ rate above!"></textarea>
+                            <button class="log-save-btn" onclick="saveLog(${i})">💾 Save Log</button>
+                            ${epLogs.slice(0,2).map(log => {
+                                const stars = '★'.repeat(Math.floor(log.rating)) + 
+                                             (log.rating % 1 === 0.5 ? '½' : '') + 
+                                             '☆'.repeat(5 - Math.ceil(log.rating));
+                                return `
+                                    <div class="saved-log">
+                                        ⭐ ${stars} ${log.date}<br>
+                                        <small>${log.comment}</small>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>`;
+            }
+            container.innerHTML = html;
+            updateStats();
+        }
+
+        function renderMovies() {
+            const container = document.getElementById('moviesGrid');
+            container.innerHTML = MOVIES.map(movie => {
+                const isWatched = watchedMovies[`movie${movie.id}`];
+                return `
+                <div class="movie-card ${isWatched ? 'watched' : ''}">
+                    <img src="${movie.poster}" alt="${movie.title}" class="movie-poster" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iNTAlIiB5PSI1NSUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTkiPk1PVklFPSBSRUFkeTwvdGV4dD48L3N2Zz4='">
+                    <h3>${movie.title}</h3>
+                    <p style="color: var(--accent); font-size: 0.9rem;">${movie.note}</p>
+                    <button class="action-btn ${isWatched ? 'unmark-watched' : 'mark-watched'}" 
+                            onclick="toggleMovie(${movie.id})" style="margin-top: 1rem;">
+                        ${isWatched ? '❌ Unwatch' : '✅ Mark Watched'}
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleEpisode(num) {
+            const id = `ep${num}`;
+            watchedEpisodes[id] = !watchedEpisodes[id];
+            if (watchedEpisodes[id]) {
+                skippedEpisodes[id] = false; // Unskip if watched
+            }
+            localStorage.setItem('conanEpisodes', JSON.stringify(watchedEpisodes));
+            localStorage.setItem('conanSkipped', JSON.stringify(skippedEpisodes));
+            renderEpisodes();
+            updateProgress();
+        }
+
+        function toggleFavorite(num) {
+            const id = `ep${num}`;
+            favoriteEpisodes[id] = !favoriteEpisodes[id];
+            localStorage.setItem('conanFavorites', JSON.stringify(favoriteEpisodes));
+            renderEpisodes();
+        }
+
+        function toggleMovie(id) {
+            const movieId = `movie${id}`;
+            watchedMovies[movieId] = !watchedMovies[movieId];
+            localStorage.setItem('conanMovies', JSON.stringify(watchedMovies));
+            renderMovies();
+            updateStats();
+        }
+
+        function renderSeasonNav() {
+            const nav = document.getElementById('seasonNav');
+            nav.innerHTML = SEASONS.map(season =>
+                `<button class="season-btn ${season.id === currentSeason ? 'active' : ''}" onclick="showSeason(${season.id})">
+                    S${season.id} (${season.start}-${season.end})
+                </button>`
+            ).join('');
+        }
+
+        function showSeason(seasonId) {
+            currentSeason = seasonId;
+            document.getElementById('seasonActions').style.display = 'flex';
+            renderSeasonNav();
+            renderEpisodes();
+            updateProgress();
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('seriesSection').style.display = tab === 'series' ? 'block' : 'none';
+            document.getElementById('moviesSection').style.display = tab === 'movies' ? 'block' : 'none';
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'movies') renderMovies();
+        }
+
+        function markSeasonAll() {
+            const season = SEASONS.find(s => s.id === currentSeason);
+            for (let i = season.start; i <= season.end; i++) {
+                const id = `ep${i}`;
+                watchedEpisodes[id] = true;
+                skippedEpisodes[id] = false;
+            }
+            localStorage.setItem('conanEpisodes', JSON.stringify(watchedEpisodes));
+            localStorage.setItem('conanSkipped', JSON.stringify(skippedEpisodes));
+            renderEpisodes();
+            updateProgress();
+        }
+
+        function clearSeason() {
+            const season = SEASONS.find(s => s.id === currentSeason);
+            for (let i = season.start; i <= season.end; i++) {
+                const id = `ep${i}`;
+                delete watchedEpisodes[id];
+                delete skippedEpisodes[id];
+                delete favoriteEpisodes[id];
+            }
+            localStorage.setItem('conanEpisodes', JSON.stringify(watchedEpisodes));
+            localStorage.setItem('conanSkipped', JSON.stringify(skippedEpisodes));
+            localStorage.setItem('conanFavorites', JSON.stringify(favoriteEpisodes));
+            renderEpisodes();
+            updateProgress();
+        }
+
+        // 🆕 EVENT DELEGATION
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('.star')) {
+                const starsContainer = e.target.closest('.stars-container');
+                const epNum = parseInt(starsContainer.dataset.episode);
+                const rating = parseInt(e.target.dataset.rating);
+                setRating(epNum, rating);
+            }
+            if (e.target.id === 'fullLogsModal') closeFullLogs();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (e.target.matches('.star')) {
+                const starsContainer = e.target.closest('.stars-container');
+                const epNum = parseInt(starsContainer.dataset.episode);
+                const hoverRating = parseInt(e.target.dataset.rating);
+                setRating(epNum, hoverRating);
+            }
+        });
+
+        document.addEventListener('mouseleave', function(e) {
+            if (e.target.matches('.stars-container')) {
+                const epNum = parseInt(e.target.dataset.episode);
+                const savedRating = logs[`ep${epNum}`]?.[0]?.rating || 0;
+                if (savedRating > 0) setRating(epNum, savedRating);
+            }
+        });
+
+       // 🆕 PERFECT STAR RATING - Hover ANY star = lights up to THAT star only
+document.addEventListener('mouseover', function(e) {
+    if (e.target.matches('.star')) {
+        const starsContainer = e.target.closest('.stars-container');
+        const hoveredStar = e.target;
+        const allStars = starsContainer.querySelectorAll('.star');
+        
+        // Light up ONLY up to hovered star
+        allStars.forEach((star, index) => {
+            if (star === hoveredStar || index < Array.from(allStars).indexOf(hoveredStar)) {
+                star.classList.add('active');
+            } else {
+                star.classList.remove('active', 'half');
+            }
+        });
+    }
+});
+
+document.addEventListener('mouseout', function(e) {
+    if (e.target.closest('.stars-container')) {
+        const starsContainer = e.target.closest('.stars-container');
+        const epNum = parseInt(starsContainer.dataset.episode);
+        const savedRating = logs[`ep${epNum}`]?.[0]?.rating || 0;
+        
+        // Reset to saved OR empty
+        const allStars = starsContainer.querySelectorAll('.star');
+        allStars.forEach((star, index) => {
+            star.classList.remove('active', 'half');
+            if (savedRating > 0 && index < Math.floor(savedRating)) {
+                star.classList.add('active');
+            }
+        });
+    }
+});
+
+// 🆕 CLICK TO SET RATING
+document.addEventListener('click', function(e) {
+    if (e.target.matches('.star')) {
+        const starsContainer = e.target.closest('.stars-container');
+        const epNum = parseInt(starsContainer.dataset.episode);
+        const rating = parseInt(e.target.dataset.rating);
+        setRating(epNum, rating);
+    }
+});
+
+        // PWA OFFLINE SUPPORT
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:text/javascript;base64,' + 
+            btoa(`self.addEventListener('fetch', e => {
+                e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+            }); self.addEventListener('install', e => e.waitUntil(caches.open('conan-v1')));`)
+            ).catch(() => {}); // Silent fail
+        }
+
+        // INIT
+        function init() {
+            // Load theme
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+            document.querySelector('.theme-toggle').textContent = savedTheme === 'light' ? '🌙' : '☀️';
+            
+            renderSeasonNav();
+            showSeason(currentSeason);
+            updateStats();
+            updateProgress();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
